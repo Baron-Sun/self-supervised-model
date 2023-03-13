@@ -8,6 +8,8 @@ from transformers import get_scheduler
 from transformers import AutoModelForSequenceClassification
 import argparse
 import subprocess
+import matplotlib.pyplot as plt
+import os
 
 
 def print_gpu_memory():
@@ -52,7 +54,7 @@ class BoolQADataset(torch.utils.data.Dataset):
         answer = self.answers[index]
 
         # this is input encoding for your model. Note, question comes first since we are doing question answering
-        # and we don't wnt it to be truncated if the passage is too long
+        # and we don't want it to be truncated if the passage is too long
         input_encoding = question + " [SEP] " + passage
 
         # encode_plus will encode the input and return a dictionary of tensors
@@ -140,7 +142,6 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, device, 
         print(f"Epoch {epoch + 1} training:")
 
         for i, batch in enumerate(train_dataloader):
-
             """
             You need to make some changes here to make this function work.
             Specifically, you need to: 
@@ -154,30 +155,47 @@ def train(mymodel, num_epochs, train_dataloader, validation_dataloader, device, 
             Then, compute the accuracy using the logits and the labels.
             """
 
-            input_ids = ...
-            attention_mask = ...
+            # extract the input_ids, attention_mask, and labels from the batch; then send them to the device
+            input_ids = batch['input_ids'].to(device)
+            attention_mask = batch['attention_mask'].to(device)
+            labels = batch['labels'].to(device)
 
-            output = mymodel(...)
-            predictions = ...
-            model_loss = loss(...)
+            output = mymodel(input_ids=input_ids, attention_mask=attention_mask)
+            predictions = output.logits
+            model_loss = loss(predictions, labels)
 
-            ...
+            # call loss.backward() to compute the gradients
+            model_loss.backward()
 
+            # call optimizer.step()  to update the model parameters
+            optimizer.step()
+
+            # call lr_scheduler.step() to update the learning rate
+            lr_scheduler.step()
+
+            # call optimizer.zero_grad() to reset the gradients for the next iteration
+            optimizer.zero_grad()
+
+            # compute the accuracy using the logits and the labels
             predictions = torch.argmax(predictions, dim=1)
 
             # update metrics
-            train_accuracy.add_batch(predictions=predictions, references=batch['labels'])
+            train_accuracy.add_batch(predictions=predictions, references=labels)
+            # print evaluation metrics
 
-        # print evaluation metrics
+        trick = train_accuracy.compute()
+        result[epoch + 1] = trick
         print(f" ===> Epoch {epoch + 1}")
-        print(f" - Average training metrics: accuracy={train_accuracy.compute()}")
+        print(f" - Average training metrics: accuracy={trick}")
 
         # normally, validation would be more useful when training for many epochs
         val_accuracy = evaluate_model(mymodel, validation_dataloader, device)
+        result_dev[epoch + 1] = val_accuracy
         print(f" - Average validation metrics: accuracy={val_accuracy}")
 
 
-def pre_process(model_name, batch_size, device, small_subset=False):
+
+def pre_process(model_name, batch_size, device, small_subset):
     # download dataset
     print("Loading the dataset ...")
     dataset = load_dataset("boolq")
@@ -195,6 +213,11 @@ def pre_process(model_name, batch_size, device, small_subset=False):
         dataset_train_subset = dataset['train'][:8000]
         dataset_dev_subset = dataset['validation']
         dataset_test_subset = dataset['train'][8000:]
+
+    print("Size of the loaded dataset:")
+    print(f" - train: {len(dataset_train_subset['passage'])}")
+    print(f" - dev: {len(dataset_dev_subset['passage'])}")
+    print(f" - test: {len(dataset_test_subset['passage'])}")
 
     # maximum length of the input; any input longer than this will be truncated
     # we had to do some pre-processing on the data to figure what is the length of most instances in the dataset
@@ -244,7 +267,7 @@ def pre_process(model_name, batch_size, device, small_subset=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--experiment", type=str, default=None)
-    parser.add_argument("--small_subset", type=bool, default=False)
+    parser.add_argument("--small_subset", action='store_true')
     parser.add_argument("--num_epochs", type=int, default=1)
     parser.add_argument("--lr", type=float, default=5e-5)
     parser.add_argument("--batch_size", type=int, default=32)
@@ -254,20 +277,42 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(f"Specified arguments: {args}")
 
+    assert type(args.small_subset) == bool, "small_subset must be a boolean"
+
     # load the data and models
     pretrained_model, train_dataloader, validation_dataloader, test_dataloader = pre_process(args.model,
                                                                                              args.batch_size,
                                                                                              args.device,
                                                                                              args.small_subset)
 
+    result = {}
+    result_dev = {}
+
     print(" >>>>>>>>  Starting training ... ")
-    train(...)
+    train(pretrained_model, args.num_epochs, train_dataloader, validation_dataloader, args.device, args.lr)
 
     # print the GPU memory usage just to make sure things are alright
     print_gpu_memory()
 
-    val_accuracy = ...
+    val_accuracy = evaluate_model(pretrained_model, validation_dataloader, args.device)
     print(f" - Average DEV metrics: accuracy={val_accuracy}")
 
-    test_accuracy = ...
+    test_accuracy = evaluate_model(pretrained_model, test_dataloader, args.device)
     print(f" - Average TEST metrics: accuracy={test_accuracy}")
+
+    epochs = list(result.keys())
+    accuracies = [result[epoch]['accuracy'] for epoch in epochs]
+    accuracies_d = [result_dev[epoch]['accuracy'] for epoch in epochs]
+
+    plt.plot(epochs, accuracies, marker='', label='train')
+    plt.plot(epochs, accuracies_d, marker='', label='dev')
+
+    plt.xlabel('epochs')
+    plt.ylabel('accuracy')
+    plt.title('accuracy vs. epochs')
+    plt.legend()
+
+    file_path = '/home/bsun26/myplot.png'
+    plt.savefig(file_path)
+
+    plt.show()

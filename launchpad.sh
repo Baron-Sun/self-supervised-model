@@ -11,14 +11,16 @@
 #SBATCH --job-name="HW6 CS 601.471/671 homework"
 
 
+
 module load anaconda
 
 # init virtual environment if needed
-# conda create -n toy_classification_env python=3.7
+conda create -n toy_classification_env python=3.7
 
 conda activate toy_classification_env # open the Python environment
 
 pip install -r requirements.txt # install Python dependencies
 
 # runs your code
-srun python classification.py  --experiment "overfit" --small_subset True --device cuda --model "distilbert-base-uncased" --batch_size "32" --lr 1e-4 --num_epochs 20
+# srun python classification.py  --experiment "overfit" --small_subset --device cuda --model "distilbert-base-uncased" --batch_size "32" --lr 1e-4 --num_epochs 20
+srun python classification.py  --experiment "overfit" --device cuda --model "distilbert-base-uncased" --batch_size "64" --lr 1e-4 --num_epochs 30
