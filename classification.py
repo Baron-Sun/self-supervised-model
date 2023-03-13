@@ -285,6 +285,9 @@ if __name__ == "__main__":
                                                                                              args.device,
                                                                                              args.small_subset)
 
+    # Question 2
+    # # srun python classification.py  --experiment "overfit" --small_subset --device cuda --model "distilbert-base-uncased" --batch_size "32" --lr 1e-4 --num_epochs 20
+    
     result = {}
     result_dev = {}
 
