@@ -19,3 +19,13 @@ scp bsun26@login.rockfish.jhu.edu:/home/bsun26/myplot.png /Users/bolunsun/Downlo
 srun python classification.py  --experiment "overfit" --device cuda --model "distilbert-base-uncased" --batch_size "64" --lr 1e-4 --num_epochs 30
 
 srun python classification.py  --experiment "overfit" --device cuda --model "distilbert-base-uncased" --batch_size "128" --lr 1e-4 --num_epochs 30
+
+
+# 7
+srun python classification.py  --experiment "overfit" --device cuda --model "distilbert-base-uncased" --batch_size "64" --lr 1e-4 --num_epochs 9
+
+srun python classification.py  --experiment "overfit" --device cuda --model "distilbert-base-uncased" --batch_size "128" --lr 1e-4 --num_epochs 30
+
+srun python classification.py  --experiment "overfit" --device cuda --model "distilbert-base-uncased" --batch_size "64" --lr 5e-4 --num_epochs 9
+
+srun python classification.py  --experiment "overfit" --device cuda --model "distilbert-base-uncased" --batch_size "64" --lr 1e-3 --num_epochs 9
