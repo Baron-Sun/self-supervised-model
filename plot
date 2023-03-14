@@ -1,3 +1,19 @@
+# 8
+
+srun python classification.py  --experiment "overfit" --device cuda --model "BERT-base-cased" --batch_size "32" --lr 1e-4 --num_epochs 9
+
+srun python classification.py  --experiment "overfit" --device cuda --model "BERT-base-cased" --batch_size "32" --lr 5e-4 --num_epochs 9
+
+srun python classification.py  --experiment "overfit" --device cuda --model "BERT-base-cased" --batch_size "32" --lr 1e-3 --num_epochs 9
+
+
+srun python classification.py  --experiment "overfit" --device cuda --model "RoBERTa-large" --batch_size "8" --lr 1e-4 --num_epochs 9
+
+srun python classification.py  --experiment "overfit" --device cuda --model "RoBERTa-large" --batch_size "32" --lr 5e-4 --num_epochs 9
+
+srun python classification.py  --experiment "overfit" --device cuda --model "RoBERTa-large" --batch_size "32" --lr 1e-3 --num_epochs 9
+
+
 import matplotlib.pyplot as plt
 
 # Define data
